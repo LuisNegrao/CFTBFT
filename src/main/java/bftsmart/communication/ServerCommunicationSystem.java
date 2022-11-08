@@ -1,18 +1,18 @@
 /**
-Copyright (c) 2007-2013 Alysson Bessani, Eduardo Alchieri, Paulo Sousa, and the authors indicated in the @author tags
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+ * Copyright (c) 2007-2013 Alysson Bessani, Eduardo Alchieri, Paulo Sousa, and the authors indicated in the @author tags
+ * <p>
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package bftsmart.communication;
 
 import java.util.concurrent.LinkedBlockingQueue;
@@ -44,8 +44,9 @@ public class ServerCommunicationSystem extends Thread {
     private boolean doWork = true;
     public final long MESSAGE_WAIT_TIME = 100;
     private LinkedBlockingQueue<SystemMessage> inQueue = null;//new LinkedBlockingQueue<SystemMessage>(IN_QUEUE_SIZE);
+    private LinkedBlockingQueue<SystemMessage> switchingQueue;
     protected MessageHandler messageHandler;
-    
+
     private ServersCommunicationLayer serversConn;
     private CommunicationSystemServerSide clientsConn;
     private ServerViewController controller;
@@ -57,15 +58,15 @@ public class ServerCommunicationSystem extends Thread {
         super("Server Comm. System");
 
         this.controller = controller;
-        
+
         messageHandler = new MessageHandler();
 
         inQueue = new LinkedBlockingQueue<SystemMessage>(controller.getStaticConf().getInQueueSize());
-
-        serversConn = new ServersCommunicationLayer(controller, inQueue, replica);
+        switchingQueue = new LinkedBlockingQueue<>();
+        serversConn = new ServersCommunicationLayer(controller, inQueue, replica, switchingQueue);
 
         //******* EDUARDO BEGIN **************//
-            clientsConn = CommunicationSystemServerSideFactory.getCommunicationSystemServerSide(controller);
+        clientsConn = CommunicationSystemServerSideFactory.getCommunicationSystemServerSide(controller);
         //******* EDUARDO END **************//
     }
 
@@ -103,7 +104,7 @@ public class ServerCommunicationSystem extends Thread {
      */
     @Override
     public void run() {
-        
+
         long count = 0;
         while (doWork) {
             try {
@@ -111,18 +112,32 @@ public class ServerCommunicationSystem extends Thread {
                     logger.debug("After " + count + " messages, inQueue size=" + inQueue.size());
                 }
 
-                SystemMessage sm = inQueue.poll(MESSAGE_WAIT_TIME, TimeUnit.MILLISECONDS);
+                SystemMessage sm  = null;
+
+                try {
+                    controller.queueLock.lock();
+
+                    if (switchingQueue.size() > 0 || controller.getStaticConf().running.get()) {
+                        sm = switchingQueue.poll(MESSAGE_WAIT_TIME, TimeUnit.MILLISECONDS);
+                    }
+                } finally {
+                    controller.queueLock.unlock();
+                }
+
+                if (sm == null)
+                    sm = inQueue.poll(MESSAGE_WAIT_TIME, TimeUnit.MILLISECONDS);
+
 
                 if (sm != null) {
                     logger.debug("<-- receiving, msg:" + sm);
                     messageHandler.processData(sm);
                     count++;
-                } else {                
-                    messageHandler.verifyPending();               
+                } else {
+                    messageHandler.verifyPending();
                 }
             } catch (InterruptedException e) {
-                
-                logger.error("Error processing message",e);
+
+                logger.error("Error processing message", e);
             }
         }
         logger.info("ServerCommunicationSystem stopped.");
@@ -141,7 +156,7 @@ public class ServerCommunicationSystem extends Thread {
         if (sm instanceof TOMMessage) {
             clientsConn.send(targets, (TOMMessage) sm, false);
         } else {
-        	logger.debug("--> sending message from: {} -> {}" + sm.getSender(), targets);
+            logger.debug("--> sending message from: {} -> {}" + sm.getSender(), targets);
             serversConn.send(targets, sm, true);
         }
     }
@@ -149,26 +164,26 @@ public class ServerCommunicationSystem extends Thread {
     public ServersCommunicationLayer getServersConn() {
         return serversConn;
     }
-    
+
     public CommunicationSystemServerSide getClientsConn() {
         return clientsConn;
     }
-    
+
     @Override
     public String toString() {
         return serversConn.toString();
     }
-    
+
     public void shutdown() {
-        
+
         logger.info("Shutting down communication layer");
-        
-        this.doWork = false;        
+
+        this.doWork = false;
         clientsConn.shutdown();
         serversConn.shutdown();
     }
-    
+
     public SecretKey getSecretKey(int id) {
-		return serversConn.getSecretKey(id);
-	}
+        return serversConn.getSecretKey(id);
+    }
 }

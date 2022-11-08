@@ -1,3 +1,4 @@
+/*
 package bftsmart.tests;
 
 import controller.BenchmarkControllerBootstrapper;
@@ -38,3 +39,4 @@ public class BenchmarkControllerStarter {
 		new BenchmarkControllerBootstrapper(properties);
 	}
 }
+*/

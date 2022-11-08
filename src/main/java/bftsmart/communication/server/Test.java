@@ -33,7 +33,7 @@ public class Test {
         //******* EDUARDO BEGIN **************//
         ServerViewController controller = new ServerViewController(Integer.parseInt(args[0]), null, null);
         LinkedBlockingQueue<SystemMessage> inQueue = new LinkedBlockingQueue<SystemMessage>();
-        ServersCommunicationLayer scl = new ServersCommunicationLayer(controller, inQueue,null);
+        ServersCommunicationLayer scl = new ServersCommunicationLayer(controller, inQueue,null, null);
 
         int id = controller.getStaticConf().getProcessId();
         int n = controller.getCurrentViewN();

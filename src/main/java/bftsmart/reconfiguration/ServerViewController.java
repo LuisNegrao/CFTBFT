@@ -27,6 +27,7 @@ import bftsmart.tom.core.messages.TOMMessage;
 import bftsmart.tom.util.KeyLoader;
 import bftsmart.tom.util.TOMUtil;
 import java.security.Provider;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,7 +43,8 @@ public class ServerViewController extends ViewController {
     public static final int ADD_SERVER = 0;
     public static final int REMOVE_SERVER = 1;
     public static final int CHANGE_F = 2;
-    
+    public ReentrantLock queueLock = new ReentrantLock();
+
     private int quorumBFT; // ((n + f) / 2) replicas
     private int quorumCFT; // (n / 2) replicas
     private int[] otherProcesses;
@@ -85,7 +87,15 @@ public class ServerViewController extends ViewController {
 
         return addresses;
     }
-    
+
+    public int getQuorumBFT() {
+        return quorumBFT;
+    }
+
+    public int getQuorumCFT() {
+        return quorumCFT;
+    }
+
     public void setTomLayer(TOMLayer tomLayer) {
         this.tomLayer = tomLayer;
     }

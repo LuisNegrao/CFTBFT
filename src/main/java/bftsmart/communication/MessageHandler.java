@@ -15,6 +15,9 @@ limitations under the License.
 */
 package bftsmart.communication;
 
+import bftsmart.Switcher.Messages.ConfirmationMessage;
+import bftsmart.Switcher.Messages.SwitchMessage;
+import bftsmart.Switcher.Messages.TriggerMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,9 +53,10 @@ public class MessageHandler {
 
 	@SuppressWarnings("unchecked")
 	protected void processData(SystemMessage sm) {
+		int myId = 0;
 		if (sm instanceof ConsensusMessage) {
 
-			int myId = tomLayer.controller.getStaticConf().getProcessId();
+			myId = tomLayer.controller.getStaticConf().getProcessId();
 
 			ConsensusMessage consMsg = (ConsensusMessage) sm;
 
@@ -62,7 +66,13 @@ public class MessageHandler {
 				logger.warn("Discarding unauthenticated message from " + sm.getSender());
 			}
 
-		} else {
+		} else if (sm instanceof TriggerMessage) {
+			this.tomLayer.getSwitcher().receiveTriggerMessage((TriggerMessage) sm);
+		} else if (sm instanceof SwitchMessage) {
+			this.tomLayer.getSwitcher().receiveSwitchMessage((SwitchMessage) sm);
+		} else if (sm instanceof ConfirmationMessage) {
+			this.tomLayer.getSwitcher().receiveConfirmation((ConfirmationMessage) sm);
+		}else {
 			if (sm.authenticated) {
 				/*** This is Joao's code, related to leader change */
 				if (sm instanceof LCMessage) {
@@ -71,18 +81,18 @@ public class MessageHandler {
 					String type = null;
 					switch (lcMsg.getType()) {
 
-					case TOMUtil.STOP:
-						type = "STOP";
-						break;
-					case TOMUtil.STOPDATA:
-						type = "STOPDATA";
-						break;
-					case TOMUtil.SYNC:
-						type = "SYNC";
-						break;
-					default:
-						type = "LOCAL";
-						break;
+						case TOMUtil.STOP:
+							type = "STOP";
+							break;
+						case TOMUtil.STOPDATA:
+							type = "STOPDATA";
+							break;
+						case TOMUtil.SYNC:
+							type = "SYNC";
+							break;
+						default:
+							type = "LOCAL";
+							break;
 					}
 
 					if (lcMsg.getReg() != -1 && lcMsg.getSender() != -1)
@@ -90,7 +100,7 @@ public class MessageHandler {
 								type, lcMsg.getReg(), lcMsg.getSender());
 					else
 						logger.debug("Received leader change message from myself");
-					
+
 					if (lcMsg.TRIGGER_LC_LOCALLY)
 						tomLayer.requestsTimer.run_lc_protocol();
 					else
@@ -105,21 +115,21 @@ public class MessageHandler {
 				} else if (sm instanceof SMMessage) {
 					SMMessage smsg = (SMMessage) sm;
 					switch (smsg.getType()) {
-					case TOMUtil.SM_REQUEST:
-						tomLayer.getStateManager().SMRequestDeliver(smsg, tomLayer.controller.getStaticConf().isBFT());
-						break;
-					case TOMUtil.SM_REPLY:
-						tomLayer.getStateManager().SMReplyDeliver(smsg, tomLayer.controller.getStaticConf().isBFT());
-						break;
-					case TOMUtil.SM_ASK_INITIAL:
-						tomLayer.getStateManager().currentConsensusIdAsked(smsg.getSender(), smsg.getCID());
-						break;
-					case TOMUtil.SM_REPLY_INITIAL:
-						tomLayer.getStateManager().currentConsensusIdReceived(smsg);
-						break;
-					default:
-						tomLayer.getStateManager().stateTimeout();
-						break;
+						case TOMUtil.SM_REQUEST:
+							tomLayer.getStateManager().SMRequestDeliver(smsg, tomLayer.controller.getStaticConf().isBFT());
+							break;
+						case TOMUtil.SM_REPLY:
+							tomLayer.getStateManager().SMReplyDeliver(smsg, tomLayer.controller.getStaticConf().isBFT());
+							break;
+						case TOMUtil.SM_ASK_INITIAL:
+							tomLayer.getStateManager().currentConsensusIdAsked(smsg.getSender(), smsg.getCID());
+							break;
+						case TOMUtil.SM_REPLY_INITIAL:
+							tomLayer.getStateManager().currentConsensusIdReceived(smsg);
+							break;
+						default:
+							tomLayer.getStateManager().stateTimeout();
+							break;
 					}
 					/******************************************************************/
 				} else {

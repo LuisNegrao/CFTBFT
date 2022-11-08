@@ -16,6 +16,7 @@
  */
 package bftsmart.tom.core;
 
+import bftsmart.Switcher.Switcher;
 import bftsmart.clientsmanagement.ClientsManager;
 import bftsmart.clientsmanagement.RequestList;
 import bftsmart.communication.ServerCommunicationSystem;
@@ -110,6 +111,8 @@ public final class TOMLayer extends Thread implements RequestReceiver {
     public ServerViewController controller;
 
     private final Synchronizer syncher;
+    private Switcher switcher;
+
 
     /**
      * Creates a new instance of TOMulticastLayer
@@ -136,7 +139,8 @@ public final class TOMLayer extends Thread implements RequestReceiver {
         this.acceptor = a;
         this.communication = cs;
         this.controller = controller;
-
+        this.switcher = new Switcher(this.acceptor, this);
+        this.switcher.start();
         /*Tulio Ribeiro*/
         this.privateKey = this.controller.getStaticConf().getPrivateKey();
         this.publicKey = new HashMap<>();
@@ -199,6 +203,10 @@ public final class TOMLayer extends Thread implements RequestReceiver {
 
             }, 0, controller.getStaticConf().getBatchTimeout());
         }
+    }
+
+    public Switcher getSwitcher() {
+        return switcher;
     }
 
     /**
