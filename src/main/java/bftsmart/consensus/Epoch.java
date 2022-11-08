@@ -169,6 +169,11 @@ public class Epoch implements Serializable {
         return this.alreadyRemoved;
     }
 
+    public void clearCurrentConsensusInstance() {
+        this.propValue = null;
+        this.propValueHash = null;
+
+    }
 
     public void addToProof(ConsensusMessage pm) {
         proof.add(pm);

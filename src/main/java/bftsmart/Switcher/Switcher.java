@@ -55,7 +55,7 @@ public class Switcher extends Thread {
     public void receiveTriggerMessage(TriggerMessage message) {
 
         // Check if the algorithm is already running.
-        if (this.tomLayer.controller.getStaticConf().running.get()) {
+        if (this.tomLayer.controller.getStaticConf().running.get() && message.getSender() != this.tomLayer.controller.getStaticConf().getProcessId()) {
             logger.info("Trigger message discarded since the protocol is already running");
             return;
         }
@@ -132,6 +132,7 @@ public class Switcher extends Thread {
             this.switchExecuted = false;
             logger.info("Change protocol has ended. Normal execution will begin");
         }
+
     }
 
     @Override
@@ -139,35 +140,7 @@ public class Switcher extends Thread {
         logger.info("Inside default thread");
         while (!Thread.currentThread().isInterrupted()) {
 
-            if (!this.tomLayer.controller.getStaticConf().isBFT()) {
-                continue;
-            }
 
-            if (this.tomLayer.controller.getStaticConf().running.get())
-                continue;
-
-            if (this.tomLayer.getInExec() != -1)
-                continue;
-
-            int cid = this.tomLayer.getLastExec();
-
-            if (!this.tomLayer.controller.getStaticConf().canChange(cid)) {
-                continue;
-            }
-
-            logger.info("Calling back to CFT");
-
-            Epoch epoch = this.acceptor.getExecutionManager().getConsensus(cid).getLastEpoch();
-
-            TriggerMessage message = new TriggerMessage(this.tomLayer.getLastExec(), epoch.getTimestamp(),
-                    this.tomLayer.controller.getStaticConf().getProcessId());
-            sendMessage(message);
-
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
         }
 
     }

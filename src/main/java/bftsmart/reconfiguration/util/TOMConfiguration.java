@@ -127,7 +127,8 @@ public class TOMConfiguration extends Configuration {
         if (this.isBFT) {
             return cid > lastChange + defaultWaitTime + timeIncrease * multiplier;
         }
-        return true;
+
+        return cid > lastChange;
     }
 
     @Override

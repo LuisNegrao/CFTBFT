@@ -140,7 +140,7 @@ public final class TOMLayer extends Thread implements RequestReceiver {
         this.communication = cs;
         this.controller = controller;
         this.switcher = new Switcher(this.acceptor, this);
-        this.switcher.start();
+        //this.switcher.start();
         /*Tulio Ribeiro*/
         this.privateKey = this.controller.getStaticConf().getPrivateKey();
         this.publicKey = new HashMap<>();
@@ -490,6 +490,10 @@ public final class TOMLayer extends Thread implements RequestReceiver {
                     continue;
 
                 }
+
+
+
+
                 execManager.getProposer().startConsensus(execId, createPropose(dec));
             }
         }

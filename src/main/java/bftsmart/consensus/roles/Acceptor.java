@@ -144,6 +144,10 @@ public final class Acceptor {
     public final void processMessage(ConsensusMessage msg) {
         Consensus consensus = executionManager.getConsensus(msg.getNumber());
 
+        if (changeBack()) {
+            return;
+        }
+        
         consensus.lock.lock();
         Epoch epoch = consensus.getEpoch(msg.getEpoch(), controller);
         System.out.print("Consensus Message: " + msg.getSender());
@@ -164,6 +168,39 @@ public final class Acceptor {
             }
         }
         consensus.lock.unlock();
+    }
+
+    private boolean changeBack() {
+
+        if (!this.tomLayer.controller.getStaticConf().isBFT()) {
+            return false;
+        }
+
+        if (this.tomLayer.controller.getStaticConf().running.get())
+            return false;
+
+        if (this.tomLayer.getInExec() != -1)
+            return false;
+
+        int cid = this.tomLayer.getLastExec();
+
+        if (!this.tomLayer.controller.getStaticConf().canChange(cid)) {
+            return false;
+        }
+
+        logger.info("Calling back to CFT");
+
+        Epoch epoch = this.getExecutionManager().getConsensus(cid).getLastEpoch();
+
+        this.controller.getStaticConf().running.set(true);
+
+        TriggerMessage message = new TriggerMessage(this.tomLayer.getLastExec(), epoch.getTimestamp(),
+                this.tomLayer.controller.getStaticConf().getProcessId());
+
+        int[] targets = this.tomLayer.controller.getCurrentViewAcceptors();
+        this.tomLayer.getCommunication().getServersConn().send(targets, message, true);
+
+        return true;
     }
 
     /**
