@@ -463,7 +463,7 @@ public final class Acceptor {
                 epoch.getTimestamp());
 
 
-        if (cid % 500 == 0 && cid != 0 && !this.controller.getStaticConf().isBFT()) {
+        if (cid % 10000 == 0 && cid != 0 && !this.controller.getStaticConf().isBFT()) {
 
             this.tomLayer.getCommunication().getServersConn().send(this.tomLayer.controller.getCurrentViewAcceptors()
                     , new TriggerMessage(cid, epoch.getTimestamp(), this.tomLayer.controller.getStaticConf().getProcessId()), true);
