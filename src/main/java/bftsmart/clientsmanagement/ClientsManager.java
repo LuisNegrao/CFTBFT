@@ -138,7 +138,7 @@ public class ClientsManager {
 
                 clientData.clientLock.lock();
 
-                logger.debug("Number of pending requests for client {}: {}.", clientData.getClientId(), clientPendingRequests.size());
+                logger.info("Number of pending requests for client {}: {}.", clientData.getClientId(), clientPendingRequests.size());
 
                 /******* BEGIN CLIENTDATA CRITICAL SECTION ******/
                 TOMMessage request = (clientPendingRequests.size() > i) ? clientPendingRequests.get(i) : null;
@@ -315,7 +315,7 @@ public class ClientsManager {
         
         //Is this a leader replay attack?
         if (!fromClient && clientData.getSession() == request.getSession() &&
-                clientData.getLastMessageDelivered() >= request.getSequence()) {
+                clientData.getLastMessageDelivered() > request.getSequence()) {
             
             clientData.clientLock.unlock();
             logger.warn("Detected a leader replay attack, rejecting request");
@@ -331,7 +331,7 @@ public class ClientsManager {
         /* ################################################ */
         //pjsousa: simple flow control mechanism to avoid out of memory exception
         if (fromClient && (controller.getStaticConf().getUseControlFlow() != 0)) {
-            if (clientData.getPendingRequests().size() > controller.getStaticConf().getUseControlFlow()) {
+            if (clientData.getPendingRequests().size() >= controller.getStaticConf().getUseControlFlow()) {
                 //clients should not have more than defined in the config file
                 //outstanding messages, otherwise they will be dropped.
                 //just account for the message reception //why is this necessary?
@@ -464,11 +464,11 @@ public class ClientsManager {
      * 
      * @param requests the array of requests to account as ordered
      */
-    public void requestsOrdered(TOMMessage[] requests) {
+    public void requestsOrdered(TOMMessage[] requests, boolean aborted) {
         clientsLock.lock();
         logger.debug("Updating client manager");
         for (TOMMessage request : requests) {
-            requestOrdered(request);
+            requestOrdered(request, aborted);
         }
         logger.debug("Finished updating client manager");
         clientsLock.unlock();
@@ -480,17 +480,17 @@ public class ClientsManager {
      *
      * @param request the request ordered by the consensus
      */
-    private void requestOrdered(TOMMessage request) {
+    private void requestOrdered(TOMMessage request, boolean aborted) {
         ClientData clientData = getClientData(request.getSender());
         clientData.clientLock.lock();
 
         //stops the timer associated with this message
-        if (timer != null) {
+        if (timer != null && !aborted) {
             timer.unwatch(request);
         }
 
         /******* BEGIN CLIENTDATA CRITICAL SECTION ******/
-        if (!clientData.removeOrderedRequest(request)) {
+        if (!aborted && !clientData.removeOrderedRequest(request)) {
             logger.debug("Request " + request + " does not exist in pending requests");
         }
         if(clientData.getSession() == request.getSession()) {

@@ -878,7 +878,7 @@ public class LCManager {
 
         //return countValid >= certificateCurrentView;
         boolean ret = countValid >= (certificateLastView != -1 && pubKey != null ? certificateLastView : certificateCurrentView);
-        logger.debug("Proof for CID {} is {} ({} valid messages, needed {})",
+        logger.info("Proof for CID {} is {} ({} valid messages, needed {})",
                 cDec.getCID(), (ret ? "valid" : "invalid"), countValid, (pubKey != null ? certificateLastView : certificateCurrentView));
         return ret;
     }

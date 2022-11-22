@@ -42,8 +42,10 @@ public interface Executable {
     public byte[] executeUnordered(byte[] command, MessageContext msgCtx);
     
     default TOMMessage getTOMMessage(int processID, int viewID, byte[] command, MessageContext msgCtx, byte[] result) {
-        
+
+
         TOMMessage reply = msgCtx.recreateTOMMessage(command);
+
         reply.reply = new TOMMessage(processID, reply.getSession(), reply.getSequence(), reply.getOperationId(),
                     result, viewID, reply.getReqType());
          

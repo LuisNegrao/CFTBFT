@@ -147,7 +147,7 @@ public final class Acceptor {
         if (changeBack()) {
             return;
         }
-        
+
         consensus.lock.lock();
         Epoch epoch = consensus.getEpoch(msg.getEpoch(), controller);
         System.out.print("Consensus Message: " + msg.getSender());
@@ -158,12 +158,12 @@ public final class Acceptor {
             }
             break;
             case MessageFactory.WRITE: {
-                System.out.println(" WRITE "  + msg.getSender());
+                System.out.println(" WRITE " + msg.getSender());
                 writeReceived(epoch, msg.getSender(), msg.getValue());
             }
             break;
             case MessageFactory.ACCEPT: {
-                System.out.println(" ACCEPT "  + msg.getSender());
+                System.out.println(" ACCEPT " + msg.getSender());
                 acceptReceived(epoch, msg);
             }
         }
@@ -230,7 +230,7 @@ public final class Acceptor {
      */
     private void executePropose(Epoch epoch, byte[] value) {
         int cid = epoch.getConsensus().getId();
-        logger.debug("Executing propose for cId:{}, Epoch Timestamp:{}", cid, epoch.getTimestamp());
+        logger.info("Executing propose for cId:{}, Epoch Timestamp:{}", cid, epoch.getTimestamp());
 
         long consensusStartTime = System.nanoTime();
 
@@ -409,7 +409,7 @@ public final class Acceptor {
 
     /**
      * Create a cryptographic proof for a consensus message
-     *
+     * <p>
      * This method modifies the consensus message passed as an argument, so that it
      * contains a cryptographic proof.
      *
@@ -465,15 +465,16 @@ public final class Acceptor {
 
         if (cid % 500 == 0 && cid != 0 && !this.controller.getStaticConf().isBFT()) {
 
-            this.tomLayer.getCommunication().getServersConn().send(this.tomLayer.controller.getCurrentViewAcceptors()
-                    , new TriggerMessage(cid, epoch.getTimestamp(), this.tomLayer.controller.getStaticConf().getProcessId()), true);
-
-            return;
+            // abort the epoch
+            epoch.abort();
         }
 
-
-        if (epoch.countAccept(value) > 2 && !epoch.getConsensus().isDecided()) {
-            logger.debug("Deciding consensus " + cid);
+        int wait = this.tomLayer.controller.getStaticConf().isBFT() ? controller.getQuorumBFT(): controller.getQuorumBFT() + 1;
+        int acceptCount = epoch.countAccept(value);
+        int quorumBFT = controller.getQuorumBFT();
+        //logger.info("Accept count: " + acceptCount + " quorum: " + quorumBFT);
+        if (acceptCount >= wait && !epoch.getConsensus().isDecided()) {
+            logger.info("Deciding consensus " + cid );
             decide(epoch);
         }
     }
@@ -487,6 +488,14 @@ public final class Acceptor {
         if (epoch.getConsensus().getDecision().firstMessageProposed != null)
             epoch.getConsensus().getDecision().firstMessageProposed.decisionTime = System.nanoTime();
 
+
+        if (epoch.getAborted())
+            this.tomLayer.getCommunication().getServersConn().send(this.tomLayer.controller.getCurrentViewAcceptors()
+                    , new TriggerMessage(this.tomLayer.getInExec(), epoch.getTimestamp(),
+                            this.tomLayer.controller.getStaticConf().getProcessId()), true);
+
         epoch.getConsensus().decided(epoch, true);
+
+
     }
 }
