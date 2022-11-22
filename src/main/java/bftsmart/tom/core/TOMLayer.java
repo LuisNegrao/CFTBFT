@@ -54,7 +54,7 @@ import java.util.concurrent.locks.ReentrantLock;
 /**
  * This class implements the state machine replication protocol described in
  * Joao Sousa's 'From Byzantine Consensus to BFT state machine replication: a latency-optimal transformation' (May 2012)
- *
+ * <p>
  * The synchronization phase described in the paper is implemented in the Synchronizer class
  */
 public final class TOMLayer extends Thread implements RequestReceiver {
@@ -117,13 +117,13 @@ public final class TOMLayer extends Thread implements RequestReceiver {
     /**
      * Creates a new instance of TOMulticastLayer
      *
-     * @param manager Execution manager
-     * @param receiver Object that receives requests from clients
-     * @param recoverer Object of a class implementing Recoverable interface for the state management
-     * @param a Acceptor role of the PaW algorithm
-     * @param cs Communication system between replicas
+     * @param manager    Execution manager
+     * @param receiver   Object that receives requests from clients
+     * @param recoverer  Object of a class implementing Recoverable interface for the state management
+     * @param a          Acceptor role of the PaW algorithm
+     * @param cs         Communication system between replicas
      * @param controller Reconfiguration Manager
-     * @param verifier Implementation of predicate used to verify client requests
+     * @param verifier   Implementation of predicate used to verify client requests
      */
     public TOMLayer(ExecutionManager manager,
                     ServiceReplica receiver,
@@ -144,7 +144,7 @@ public final class TOMLayer extends Thread implements RequestReceiver {
         /*Tulio Ribeiro*/
         this.privateKey = this.controller.getStaticConf().getPrivateKey();
         this.publicKey = new HashMap<>();
-        int [] targets  = this.controller.getCurrentViewAcceptors();
+        int[] targets = this.controller.getCurrentViewAcceptors();
         for (int target : targets) {
             publicKey.put(target, controller.getStaticConf().getPublicKey(target));
         }
@@ -164,13 +164,13 @@ public final class TOMLayer extends Thread implements RequestReceiver {
         try {
             this.md = TOMUtil.getHashEngine();
         } catch (Exception e) {
-            logger.error("Failed to get message digest engine",e);
+            logger.error("Failed to get message digest engine", e);
         }
 
         try {
             this.engine = TOMUtil.getSigEngine();
         } catch (Exception e) {
-            logger.error("Failed to get signature engine",e);
+            logger.error("Failed to get signature engine", e);
         }
 
         this.dt = new DeliveryThread(this, receiver, recoverer, this.controller); // Create delivery thread
@@ -228,7 +228,7 @@ public final class TOMLayer extends Thread implements RequestReceiver {
         try {
             return new SignedObject(obj, privateKey, engine);
         } catch (Exception e) {
-            logger.error("Failed to sign object",e);
+            logger.error("Failed to sign object", e);
             return null;
         }
     }
@@ -236,7 +236,7 @@ public final class TOMLayer extends Thread implements RequestReceiver {
     /**
      * Verifies the signature of a signed object
      *
-     * @param so Signed object to be verified
+     * @param so     Signed object to be verified
      * @param sender Replica id that supposedly signed this object
      * @return True if the signature is valid, false otherwise
      */
@@ -244,7 +244,7 @@ public final class TOMLayer extends Thread implements RequestReceiver {
         try {
             return so.verify(publicKey.get(sender), engine);
         } catch (Exception e) {
-            logger.error("Failed to verify object signature",e);
+            logger.error("Failed to verify object signature", e);
         }
         return false;
     }
@@ -322,7 +322,7 @@ public final class TOMLayer extends Thread implements RequestReceiver {
      * It assumes that the communication system delivers the message in FIFO
      * order.
      *
-     * @param msg The request being received
+     * @param msg        The request being received
      * @param fromClient Whether the request was received from a client or was part of a forwarded message
      */
     @Override
@@ -330,18 +330,18 @@ public final class TOMLayer extends Thread implements RequestReceiver {
 
         if (!doWork) return;
 
-        switch(msg.getReqType()) {
-		case ASK_STATUS:
-		case REPLY:
-		case STATUS_REPLY:
-			// These kind of messages should never enter the replica
-			return;
-		case RECONFIG:
-		case ORDERED_REQUEST:
-		case UNORDERED_HASHED_REQUEST:
-		case UNORDERED_REQUEST:
-			// These messages should be processed
-			break;
+        switch (msg.getReqType()) {
+            case ASK_STATUS:
+            case REPLY:
+            case STATUS_REPLY:
+                // These kind of messages should never enter the replica
+                return;
+            case RECONFIG:
+            case ORDERED_REQUEST:
+            case UNORDERED_HASHED_REQUEST:
+            case UNORDERED_REQUEST:
+                // These messages should be processed
+                break;
         }
 
 
@@ -357,7 +357,7 @@ public final class TOMLayer extends Thread implements RequestReceiver {
 
             if (clientsManager.requestReceived(msg, fromClient, communication)) {
 
-                if(controller.getStaticConf().getBatchTimeout() == -1) {
+                if (controller.getStaticConf().getBatchTimeout() == -1) {
                     haveMessages();
                 } else {
 
@@ -400,7 +400,7 @@ public final class TOMLayer extends Thread implements RequestReceiver {
         }
         dec.batchSize = numberOfMessages;
 
-        logger.debug("Creating a PROPOSE with " + numberOfMessages + " msgs");
+        logger.info("Creating a PROPOSE with " + numberOfMessages + " msgs");
 
         return bb.makeBatch(pendingRequests, numberOfNonces, System.currentTimeMillis(), controller.getStaticConf().getUseSignatures() == 1);
     }
@@ -492,8 +492,6 @@ public final class TOMLayer extends Thread implements RequestReceiver {
                 }
 
 
-
-
                 execManager.getProposer().startConsensus(execId, createPropose(dec));
             }
         }
@@ -517,18 +515,18 @@ public final class TOMLayer extends Thread implements RequestReceiver {
     /**
      * Verify if the value being proposed for a epoch is valid. It verifies the
      * client signature of all batch requests.
-     *
+     * <p>
      * TODO: verify timestamps and nonces
      *
-     * @param proposedValue the value being proposed
+     * @param proposedValue      the value being proposed
      * @param addToClientManager add the requests to the client manager
      * @return Valid messages contained in the proposed value
      */
     public TOMMessage[] checkProposedValue(byte[] proposedValue, boolean addToClientManager) {
 
-        try{
+        try {
 
-            logger.debug("Checking proposed value");
+            logger.info("Checking proposed value");
 
             BatchReader batchReader = new BatchReader(proposedValue,
                     this.controller.getStaticConf().getUseSignatures() == 1);
@@ -552,13 +550,14 @@ public final class TOMLayer extends Thread implements RequestReceiver {
                             //notifies the client manager that this request was received and get
                             //the result of its validation
                             request.isValid = clientsManager.requestReceived(request, false);
-                            if (Thread.holdsLock(clientsManager.getClientsLock())) clientsManager.getClientsLock().unlock();
+                            if (Thread.holdsLock(clientsManager.getClientsLock()))
+                                clientsManager.getClientsLock().unlock();
 
-                        }
-                        catch (Exception e) {
+                        } catch (Exception e) {
 
                             logger.error("Error while validating requests", e);
-                            if (Thread.holdsLock(clientsManager.getClientsLock())) clientsManager.getClientsLock().unlock();
+                            if (Thread.holdsLock(clientsManager.getClientsLock()))
+                                clientsManager.getClientsLock().unlock();
 
                         }
 
@@ -570,18 +569,18 @@ public final class TOMLayer extends Thread implements RequestReceiver {
 
                 for (TOMMessage request : requests) {
                     if (!request.isValid) {
-                        logger.warn("Request {} could not be added to the pending messages queue of its respective client", request);
+                        logger.info("Request {} could not be added to the pending messages queue of its respective client", request);
                         return null;
                     }
                 }
             }
 
-            logger.debug("Successfully deserialized batch");
+            logger.info("Successfully deserialized batch");
 
             return requests;
 
         } catch (Exception e) {
-            logger.error("Failed to check proposed value",e);
+            logger.error("Failed to check proposed value", e);
             if (Thread.holdsLock(clientsManager.getClientsLock())) clientsManager.getClientsLock().unlock();
 
             return null;

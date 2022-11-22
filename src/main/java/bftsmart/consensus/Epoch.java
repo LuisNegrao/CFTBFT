@@ -48,7 +48,7 @@ public class Epoch implements Serializable {
     private boolean writeSent;
     private boolean acceptSent;
     private boolean acceptCreated;
-    
+    private boolean aborted;
     private boolean alreadyRemoved = false; // indicates if this epoch was removed from its consensus
 
     public byte[] propValue = null; // proposed value
@@ -76,6 +76,7 @@ public class Epoch implements Serializable {
         this.timestamp = timestamp;
         this.controller = controller;
         this.proof = new HashSet<>();
+        this.aborted = false;
         //ExecutionManager manager = consensus.getManager();
 
         this.lastView = controller.getCurrentView();
@@ -108,6 +109,14 @@ public class Epoch implements Serializable {
             this.accept = previousEpoch.getAccept();
             
         }
+    }
+
+    public void abort() {
+        this.aborted = true;
+    }
+
+    public boolean getAborted() {
+        return this.aborted;
     }
 
     // If a view change takes place and concurrentely this consensus is still
