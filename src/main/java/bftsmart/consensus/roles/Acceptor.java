@@ -277,9 +277,9 @@ public final class Acceptor {
                     logger.debug("WRITE computed for cId:{}, I am:{}", cid, me);
 
                 } else {
-                    epoch.setAccept(me, epoch.propValueHash);
-                    epoch.getConsensus().getDecision().firstMessageProposed.writeSentTime = System.nanoTime();
-                    epoch.getConsensus().getDecision().firstMessageProposed.acceptSentTime = System.nanoTime();
+                    //epoch.setAccept(me, epoch.propValueHash);
+                    //epoch.getConsensus().getDecision().firstMessageProposed.writeSentTime = System.nanoTime();
+                    //epoch.getConsensus().getDecision().firstMessageProposed.acceptSentTime = System.nanoTime();
 
                     /**** LEADER CHANGE CODE! ******/
                     logger.debug("[CFT Mode] Setting consensus " + cid + " QuorumWrite tiemstamp to "
@@ -290,8 +290,7 @@ public final class Acceptor {
                     ConsensusMessage acc = factory.createAccept(cid, epoch.getTimestamp(), epoch.propValueHash);
                     insertProof(acc, epoch.deserializedPropValue);
 
-                    communication.send(this.controller.getCurrentViewOtherAcceptors(),
-                            acc);
+                    communication.send(this.controller.getCurrentViewAcceptors(), acc);
 
                     epoch.acceptSent();
                     computeAccept(cid, epoch, epoch.propValueHash);
@@ -463,18 +462,18 @@ public final class Acceptor {
                 epoch.getTimestamp());
 
 
-        if (cid % 500 == 0 && cid != 0 && !this.controller.getStaticConf().isBFT()) {
+        if (cid % 25 == 0 && cid != 0 && !this.controller.getStaticConf().isBFT()) {
 
             // abort the epoch
             epoch.abort();
         }
 
-        int wait = this.tomLayer.controller.getStaticConf().isBFT() ? controller.getQuorumBFT(): controller.getQuorumBFT() + 1;
         int acceptCount = epoch.countAccept(value);
         int quorumBFT = controller.getQuorumBFT();
         //logger.info("Accept count: " + acceptCount + " quorum: " + quorumBFT);
-        if (acceptCount >= wait && !epoch.getConsensus().isDecided()) {
-            logger.info("Deciding consensus " + cid );
+
+        if (acceptCount >= this.controller.getQuorumBFT() && !epoch.getConsensus().isDecided()) {
+            logger.info("Deciding consensus " + cid);
             decide(epoch);
         }
     }
