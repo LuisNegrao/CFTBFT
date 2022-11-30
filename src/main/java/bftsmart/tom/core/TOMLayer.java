@@ -402,7 +402,8 @@ public final class TOMLayer extends Thread implements RequestReceiver {
 
         logger.info("Creating a PROPOSE with " + numberOfMessages + " msgs");
 
-        return bb.makeBatch(pendingRequests, numberOfNonces, System.currentTimeMillis(), controller.getStaticConf().getUseSignatures() == 1);
+        //return bb.makeBatch(pendingRequests, numberOfNonces, System.currentTimeMillis(), controller.getStaticConf().getUseSignatures() == 1);
+        return bb.makeBatch(pendingRequests, numberOfNonces, 0, controller.getStaticConf().getUseSignatures() == 1);
     }
 
     /**
