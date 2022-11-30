@@ -476,7 +476,6 @@ public final class Acceptor {
 
 
         /*if (cid % 25 == 0 && cid != 0 && !this.controller.getStaticConf().isBFT()) {
-
             // abort the epoch
             epoch.abort();
         }*/

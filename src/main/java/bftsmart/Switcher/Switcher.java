@@ -4,16 +4,14 @@ import bftsmart.Switcher.Messages.ConfirmationMessage;
 import bftsmart.Switcher.Messages.SwitchMessage;
 import bftsmart.Switcher.Messages.TriggerMessage;
 import bftsmart.communication.SystemMessage;
-import bftsmart.consensus.Epoch;
 import bftsmart.consensus.roles.Acceptor;
 import bftsmart.tom.core.TOMLayer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.sql.SQLOutput;
+
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Switcher extends Thread {
 
