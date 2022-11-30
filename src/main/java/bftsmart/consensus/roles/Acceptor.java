@@ -24,11 +24,10 @@ import java.util.LinkedList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import bftsmart.Switcher.Messages.TriggerMessage;
-import bftsmart.clientsmanagement.RequestList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
+import bftsmart.Switcher.Messages.TriggerMessage;
+import bftsmart.clientsmanagement.RequestList;
 import bftsmart.communication.ServerCommunicationSystem;
 import bftsmart.consensus.Consensus;
 import bftsmart.consensus.Epoch;
@@ -219,11 +218,13 @@ public final class Acceptor {
         byte[] arr = this.tomLayer.bb.makeBatch(clientsRequests, this.controller.getStaticConf().getNumberOfNonces(),
                 0, this.controller.getStaticConf().getUseSignatures() == 1);
 
-        if (Arrays.equals(arr, msg.getValue())) {
-            logger.info("Proposed values match the ones sent by the client");
-        } else {
-            logger.info("Proposed values do not match the ones sent by the client");
-            epoch.abort();
+        if (this.executionManager.getCurrentLeader() != this.controller.getStaticConf().getProcessId()) {
+            if (Arrays.equals(arr, msg.getValue())) {
+                logger.info("Proposed values match the ones sent by the client");
+            } else {
+                logger.info("Proposed values do not match the ones sent by the client");
+                epoch.abort();
+            }
         }
 
         logger.debug("PROPOSE received from:{}, for consensus cId:{}, I am:{}", msg.getSender(), cid, me);
