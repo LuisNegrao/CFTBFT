@@ -25,6 +25,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import bftsmart.Switcher.Messages.TriggerMessage;
+import bftsmart.clientsmanagement.RequestList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -213,6 +214,18 @@ public final class Acceptor {
         int cid = epoch.getConsensus().getId();
         int ts = epoch.getConsensus().getEts();
         int ets = executionManager.getConsensus(msg.getNumber()).getEts();
+
+        RequestList clientsRequests = this.tomLayer.clientsManager.getProposedPendidngRequests();
+        byte[] arr = this.tomLayer.bb.makeBatch(clientsRequests, this.controller.getStaticConf().getNumberOfNonces(),
+                0, this.controller.getStaticConf().getUseSignatures() == 1);
+
+        if (Arrays.equals(arr, msg.getValue())) {
+            logger.info("Proposed values match the ones sent by the client");
+        } else {
+            logger.info("Proposed values do not match the ones sent by the client");
+            epoch.abort();
+        }
+
         logger.debug("PROPOSE received from:{}, for consensus cId:{}, I am:{}", msg.getSender(), cid, me);
         if (msg.getSender() == executionManager.getCurrentLeader() // Is the replica the leader?
                 && epoch.getTimestamp() == 0 && ts == ets && ets == 0) { // Is all this in epoch 0?
@@ -277,9 +290,9 @@ public final class Acceptor {
                     logger.debug("WRITE computed for cId:{}, I am:{}", cid, me);
 
                 } else {
-                    epoch.setAccept(me, epoch.propValueHash);
-                    epoch.getConsensus().getDecision().firstMessageProposed.writeSentTime = System.nanoTime();
-                    epoch.getConsensus().getDecision().firstMessageProposed.acceptSentTime = System.nanoTime();
+                    //epoch.setAccept(me, epoch.propValueHash);
+                    //epoch.getConsensus().getDecision().firstMessageProposed.writeSentTime = System.nanoTime();
+                    //epoch.getConsensus().getDecision().firstMessageProposed.acceptSentTime = System.nanoTime();
 
                     /**** LEADER CHANGE CODE! ******/
                     logger.debug("[CFT Mode] Setting consensus " + cid + " QuorumWrite tiemstamp to "
@@ -290,8 +303,7 @@ public final class Acceptor {
                     ConsensusMessage acc = factory.createAccept(cid, epoch.getTimestamp(), epoch.propValueHash);
                     insertProof(acc, epoch.deserializedPropValue);
 
-                    communication.send(this.controller.getCurrentViewOtherAcceptors(),
-                            acc);
+                    communication.send(this.controller.getCurrentViewAcceptors(), acc);
 
                     epoch.acceptSent();
                     computeAccept(cid, epoch, epoch.propValueHash);
@@ -463,18 +475,17 @@ public final class Acceptor {
                 epoch.getTimestamp());
 
 
-        if (cid % 10000 == 0 && cid != 0 && !this.controller.getStaticConf().isBFT()) {
-
+        /*if (cid % 25 == 0 && cid != 0 && !this.controller.getStaticConf().isBFT()) {
             // abort the epoch
             epoch.abort();
-        }
+        }*/
 
-        int wait = this.tomLayer.controller.getStaticConf().isBFT() ? controller.getQuorumBFT(): controller.getQuorumBFT() + 1;
         int acceptCount = epoch.countAccept(value);
         int quorumBFT = controller.getQuorumBFT();
         //logger.info("Accept count: " + acceptCount + " quorum: " + quorumBFT);
-        if (acceptCount >= wait && !epoch.getConsensus().isDecided()) {
-            logger.info("Deciding consensus " + cid );
+
+        if (acceptCount >= this.controller.getQuorumBFT() && !epoch.getConsensus().isDecided()) {
+            logger.info("Deciding consensus " + cid);
             decide(epoch);
         }
     }
@@ -489,10 +500,10 @@ public final class Acceptor {
             epoch.getConsensus().getDecision().firstMessageProposed.decisionTime = System.nanoTime();
 
 
-        if (epoch.getAborted())
+        /*if (epoch.getAborted())
             this.tomLayer.getCommunication().getServersConn().send(this.tomLayer.controller.getCurrentViewAcceptors()
                     , new TriggerMessage(this.tomLayer.getInExec(), epoch.getTimestamp(),
-                            this.tomLayer.controller.getStaticConf().getProcessId()), true);
+                            this.tomLayer.controller.getStaticConf().getProcessId()), true);*/
 
         epoch.getConsensus().decided(epoch, true);
 

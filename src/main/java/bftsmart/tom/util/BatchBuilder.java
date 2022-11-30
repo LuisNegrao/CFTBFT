@@ -121,7 +121,9 @@ public final class BatchBuilder {
 		}
 
 		// return the batch
-		return createBatch(timestamp, numNounces,rnd.nextLong(), numMsgs, totalMessageSize,
+		/*return createBatch(timestamp, numNounces,rnd.nextLong(), numMsgs, totalMessageSize,
+				useSignatures, messages, signatures);*/
+		return createBatch(timestamp, numNounces,0, numMsgs, totalMessageSize,
 				useSignatures, messages, signatures);
 
 	}
